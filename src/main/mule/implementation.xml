@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:gmail="http://www.mulesoft.org/schema/mule/gmail"
+	xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc" xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/gmail http://www.mulesoft.org/schema/mule/gmail/current/mule-gmail.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="2e2b6865-e5ff-44f9-97ff-e39785765226" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="implementationFlow" doc:id="d9150769-3d8a-41fe-94cd-1c5c0acee0cb" >
+		<email:listener-imap doc:name="On New Email - IMAP" doc:id="56ffd457-61cf-43a9-9452-8f78d425e3bb" config-ref="Email_IMAP">
+			<reconnect />
+			<scheduling-strategy >
+				<fixed-frequency frequency="10" timeUnit="SECONDS"/>
+			</scheduling-strategy>
+		</email:listener-imap>
+		<foreach doc:name="For each attachment" doc:id="9e2d467c-0385-4163-b421-22c920d26654" 
+       collection="#[entriesOf(payload.attachments mapObject ((value, key) -&gt; {(key) : value.^raw})) default []]">
+
+        <logger level="INFO" doc:name="Logger" message="#[payload]"/>
+        <set-variable value="#[payload.key]" doc:name="attachmentName" doc:id="1cc8f26a-240a-4629-8106-7f94a18e5823" variableName="attachmentName" />
+        <logger level="INFO" doc:name="Logger" doc:id="c2a97676-0ac1-498e-814e-41d1fdfc34e9" message="#[vars.attachmentName]"/>
+
+        <file:write doc:name="output" doc:id="c2dab8d4-c11f-40fd-955a-a8c406cbc63b" path="#['/tmp/output/' ++ vars.attachmentName]">
+            <file:content ><![CDATA[#[payload.value]]]></file:content>
+        </file:write>
+    </foreach>
+	</flow>
+</mule>
