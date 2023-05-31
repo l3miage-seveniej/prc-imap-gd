@@ -1,0 +1,6 @@
+gmail_remote:
+  host: "imap.gmail.com"
+  port: "993"
+  user: "imapjsevenier@gmail.com"
+  password: "fefhgkawrpavkldk"
+  
