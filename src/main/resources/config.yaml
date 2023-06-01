@@ -3,4 +3,7 @@ gmail_remote:
   port: "993"
   user: "imapjsevenier@gmail.com"
   password: "fefhgkawrpavkldk"
-  
+ 
+host_ocr: "sys-ocr.us-e2.cloudhub.io" 
+
+host_db: "sys-mongo-db.us-e2.cloudhub.io"

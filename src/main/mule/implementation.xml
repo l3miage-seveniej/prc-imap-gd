@@ -25,11 +25,37 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 
         <logger level="INFO" doc:name="Logger" message="#[payload]"/>
         <set-variable value="#[payload.key]" doc:name="attachmentName" doc:id="1cc8f26a-240a-4629-8106-7f94a18e5823" variableName="attachmentName" />
-        <logger level="INFO" doc:name="Logger" doc:id="c2a97676-0ac1-498e-814e-41d1fdfc34e9" message="#[vars.attachmentName]"/>
+			<logger level="INFO" doc:name="Logger" doc:id="c2a97676-0ac1-498e-814e-41d1fdfc34e9" message="#[vars.attachmentName]"/>
 
-        <file:write doc:name="output" doc:id="c2dab8d4-c11f-40fd-955a-a8c406cbc63b" path="#['/tmp/output/' ++ vars.attachmentName]">
-            <file:content ><![CDATA[#[payload.value]]]></file:content>
-        </file:write>
-    </foreach>
+        <ee:transform doc:name="pdf to JSON" doc:id="a2484f0a-cf05-4302-a68f-f1993c2dc116" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+var myPDF = readUrl(payload.value, "application/octet-stream")
+output application/json
+---
+{
+	Document: {
+		Bytes:toBase64(myPDF as Binary)
+	},
+	FeatureTypes: [ "FORMS" , "TABLES" ]
+}
+
+]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<set-variable value="#[payload.Document.Bytes]" doc:name="Set Variable" doc:id="e27c0437-cb2f-4f65-b86f-b98d97cff652" variableName="file64"/>
+			<http:request method="POST" doc:name="get data textract" doc:id="f4e03557-e3e3-44ce-accb-5a8e1ec0f2fe" config-ref="HTTP_Request_configuration" path="/api/ocr" />
+			<logger level="INFO" doc:name="Logger" doc:id="ca44a74f-ef85-42bd-8d37-9301cdc07765" message="#[payload]"/>
+			<http:request method="POST" doc:name="Request" doc:id="90eae5e0-b6ad-4706-bcf2-4f50544d260e" config-ref="HTTP_Request_configuration1" path="/api/orders/{OID}">
+			<http:body ><![CDATA[#[payload ++ {file_64: vars.file64}]]]></http:body>
+				<http:uri-params><![CDATA[#[{
+	'OID' : payload.order_id
+}]]]></http:uri-params>
+			</http:request>
+    
+
+</foreach>
+		<logger level="INFO" doc:name="Logger" doc:id="c96050d3-86e1-4b7c-a2ee-bbea6d12c99c" message="#[payload]" />
 	</flow>
 </mule>
