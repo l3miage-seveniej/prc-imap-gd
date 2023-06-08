@@ -15,9 +15,9 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 	</email:imap-config>
 	<configuration-properties doc:name="Configuration properties" doc:id="c74ec0f4-7de8-4810-9771-954f3b21c99c" file="config.yaml" />
 	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="8dac78c0-f3bf-46c5-9e7a-1109e82002b4" >
-		<http:request-connection host="${host_ocr}" />
+		<http:request-connection host="${sys_ocr.host_ocr}" />
 	</http:request-config>
 	<http:request-config name="HTTP_Request_configuration1" doc:name="HTTP Request configuration" doc:id="a47168ab-bb23-447a-8960-e9bb20660665" >
-		<http:request-connection host="${host_db}" />
+		<http:request-connection host="${sys_mongo_db.host_mongo_db}" />
 	</http:request-config>
 </mule>

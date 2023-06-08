@@ -1,37 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:file="http://www.mulesoft.org/schema/mule/file"
-	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns:gmail="http://www.mulesoft.org/schema/mule/gmail"
-	xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc" xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:gmail="http://www.mulesoft.org/schema/mule/gmail" xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc" xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
 http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
 http://www.mulesoft.org/schema/mule/gmail http://www.mulesoft.org/schema/mule/gmail/current/mule-gmail.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="2e2b6865-e5ff-44f9-97ff-e39785765226" >
 		<http:listener-connection host="0.0.0.0" port="8081" />
 	</http:listener-config>
-	<flow name="implementationFlow" doc:id="d9150769-3d8a-41fe-94cd-1c5c0acee0cb" >
+	<os:object-store name="Object_store" doc:name="Object store" doc:id="d9a50771-ac62-483e-882f-436a18fbffdd" />
+	<flow name="Traitement" doc:id="d9150769-3d8a-41fe-94cd-1c5c0acee0cb" >
 		<email:listener-imap doc:name="On New Email - IMAP" doc:id="56ffd457-61cf-43a9-9452-8f78d425e3bb" config-ref="Email_IMAP">
 			<reconnect />
 			<scheduling-strategy >
-				<fixed-frequency frequency="10" timeUnit="SECONDS"/>
+				<fixed-frequency frequency="20" timeUnit="SECONDS"/>
 			</scheduling-strategy>
 		</email:listener-imap>
-		<foreach doc:name="For each attachment" doc:id="9e2d467c-0385-4163-b421-22c920d26654" 
-       collection="#[entriesOf(payload.attachments mapObject ((value, key) -&gt; {(key) : value.^raw})) default []]">
-
-        <logger level="INFO" doc:name="Logger" message="#[payload]"/>
-        <set-variable value="#[payload.key]" doc:name="attachmentName" doc:id="1cc8f26a-240a-4629-8106-7f94a18e5823" variableName="attachmentName" />
-			<logger level="INFO" doc:name="Logger" doc:id="c2a97676-0ac1-498e-814e-41d1fdfc34e9" message="#[vars.attachmentName]"/>
-
-        <ee:transform doc:name="pdf to JSON" doc:id="a2484f0a-cf05-4302-a68f-f1993c2dc116" >
-				<ee:message >
-					<ee:set-payload ><![CDATA[%dw 2.0
+		<set-variable value="#[attributes.id]" doc:name="Set Variable" doc:id="c1db8d61-2d1b-4845-b025-6c076724c97b" variableName="emailID"/>
+		<logger level="INFO" doc:name="Logger" doc:id="01a26666-e22b-4f6e-ad1a-1e01b7edbb5d" message="#[entriesOf(payload.attachments mapObject ((value, key) -&gt; {(key) : value.^raw})) default []]"/>
+		<parallel-foreach doc:name="Parallel For Each" doc:id="35db3112-e474-4cc6-8650-47e874876899" collection="#[entriesOf(payload.attachments mapObject ((value, key) -&gt; {(key) : value.^raw})) default []]">
+			<choice doc:name="Choice" doc:id="1d13936e-8eaf-4d0e-abc2-a3451a8fa229">
+				<when expression='#[!((payload.key contains (".pdf")) or (payload.key contains (".xls")))]'>
+					<logger level="INFO" doc:name="Logger" doc:id="63f29166-0d59-439b-af85-b011ae35119b" message="zizi" />
+				</when>
+				<otherwise>
+					<ee:transform doc:name="pdf to JSON" doc:id="a2484f0a-cf05-4302-a68f-f1993c2dc116">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
 import * from dw::core::Binaries
-var myPDF = readUrl(payload.value, "application/octet-stream")
+var myPDF = readUrl(payload.value , "application/octet-stream")
 output application/json
 ---
 {
@@ -44,18 +47,41 @@ output application/json
 ]]></ee:set-payload>
 				</ee:message>
 			</ee:transform>
-			<set-variable value="#[payload.Document.Bytes]" doc:name="Set Variable" doc:id="e27c0437-cb2f-4f65-b86f-b98d97cff652" variableName="file64"/>
-			<http:request method="POST" doc:name="get data textract" doc:id="f4e03557-e3e3-44ce-accb-5a8e1ec0f2fe" config-ref="HTTP_Request_configuration" path="/api/ocr" />
-			<logger level="INFO" doc:name="Logger" doc:id="ca44a74f-ef85-42bd-8d37-9301cdc07765" message="#[payload]"/>
-			<http:request method="POST" doc:name="Request" doc:id="90eae5e0-b6ad-4706-bcf2-4f50544d260e" config-ref="HTTP_Request_configuration1" path="/api/orders/{OID}">
-			<http:body ><![CDATA[#[payload ++ {file_64: vars.file64}]]]></http:body>
+					<flow-ref doc:name="UpdateBD" doc:id="37ef1f64-28ba-4b8f-9c61-533a9ab78e34" name="UpdateBD" />
+				</otherwise>
+			</choice>
+		</parallel-foreach>
+		<email:move-to-folder emailId="#[vars.emailID]" doc:name="Move to folder" doc:id="2c9ca568-10ae-4913-ba14-13b2ac0c766a" config-ref="Email_IMAP" targetFolder="ArchiveCommande"/>
+	
+</flow>
+	<flow name="implementationFlow" doc:id="3c88abf8-13b4-4032-9f0c-ec55c0616480" >
+		<scheduler doc:name="Scheduler" doc:id="f782e2ef-82dd-492c-babc-d79a69acd059" >
+			<scheduling-strategy >
+				<fixed-frequency timeUnit="SECONDS"/>
+			</scheduling-strategy>
+		</scheduler>
+		<http:request method="GET" doc:name="Request" doc:id="5d5819a3-1d05-4ad1-9f86-d29e445dcaa8" config-ref="HTTP_Request_configuration1" path="${sys_mongo_db.base_path}/clients"/>
+		<os:store doc:name="Store" doc:id="007387c0-3595-4c8f-bbee-71f7707b564c" key="listID" objectStore="Object_store"/>
+	</flow>
+	<flow name="UpdateBD" doc:id="dc0b7f7d-d18e-47fe-a116-6d1f333f22ff" >
+		<os:retrieve-all doc:name="Retrieve all" doc:id="e014de38-d5a4-4979-9f7d-7072867ff440" objectStore="Object_store" target="listClientID"/>
+		<async doc:name="Async" doc:id="b036372c-905d-4e9e-afd6-a4be252d6da2" >
+<!-- [STUDIO:"get data textract"]			<http:request method="POST" doc:name="get data textract" doc:id="f4e03557-e3e3-44ce-accb-5a8e1ec0f2fe" config-ref="HTTP_Request_configuration" path="${sys_ocr.base_path}" /> [STUDIO] -->
+			<set-variable value="#[payload.Document.Bytes]" doc:name="Set file64" doc:id="e27c0437-cb2f-4f65-b86f-b98d97cff652" variableName="file64" />
+			<choice doc:name="Choice" doc:id="2746123a-a175-4c1d-a3ed-a44b1a630892">
+			<when expression="#[true]">
+				<logger level="INFO" doc:name="Logger" doc:id="af113ee9-a2d9-4378-95b8-1301cb6b6389" />
+			</when>
+			<otherwise>
+<logger level="INFO" doc:name="Logger" doc:id="ff478a16-3246-4358-b334-d801c909e2b2" />
+<!-- [STUDIO:"Request"]								<http:request method="POST" doc:name="Request" doc:id="90eae5e0-b6ad-4706-bcf2-4f50544d260e" config-ref="HTTP_Request_configuration1" path="${sys_mongo_db.base_path}/orders/{OID}">
+			<http:body><![CDATA[#[payload ++ {file_64: vars.file64}&#93;&#93;&#93;></http:body>
 				<http:uri-params><![CDATA[#[{
 	'OID' : payload.order_id
-}]]]></http:uri-params>
-			</http:request>
-    
-
-</foreach>
-		<logger level="INFO" doc:name="Logger" doc:id="c96050d3-86e1-4b7c-a2ee-bbea6d12c99c" message="#[payload]" />
+}&#93;&#93;&#93;></http:uri-params>
+			</http:request> [STUDIO] -->
+			</otherwise>
+		</choice>
+		</async>
 	</flow>
 </mule>
